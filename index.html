@@ -30,39 +30,39 @@
     
     .home-screen.active, .difficulty-screen.active { display: flex; }
     
-    h1 { color: white; font-size: 36px; margin-bottom: 20px; text-align: center; }
-    .subtitle { color: white; font-size: 20px; margin-bottom: 30px; text-align: center; font-weight: bold; }
+    h1 { color: white; font-size: 32px; margin-bottom: 15px; text-align: center; }
+    .subtitle { color: white; font-size: 18px; margin-bottom: 20px; text-align: center; font-weight: bold; }
     
     .grid {
       display: grid;
-      grid-template-columns: 1fr;
-      gap: 15px;
-      max-width: 400px;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+      max-width: 800px;
       width: 100%;
     }
     
     .card {
       background: white;
-      border-radius: 15px;
-      padding: 20px;
+      border-radius: 12px;
+      padding: 15px;
       box-shadow: 0 4px 15px rgba(0,0,0,0.2);
     }
     
     .card h2 {
-      font-size: 20px;
+      font-size: 18px;
       color: #2D3748;
-      margin-bottom: 15px;
+      margin-bottom: 12px;
       text-align: center;
     }
     
     button {
       width: 100%;
-      padding: 15px;
-      margin: 8px 0;
-      font-size: 18px;
+      padding: 12px;
+      margin: 6px 0;
+      font-size: 16px;
       font-weight: bold;
       border: none;
-      border-radius: 12px;
+      border-radius: 10px;
       background: linear-gradient(145deg, #4ECDC4, #45B7D1);
       color: white;
       cursor: pointer;
@@ -269,11 +269,21 @@
     </div>
     
     <div class="card">
+      <h2>➖ Subtraction</h2>
+      <button onclick="selectGame('subtraction', 20)">Below 20</button>
+      <button onclick="selectGame('subtraction', 30)">Below 30</button>
+    </div>
+    
+    <div class="card">
       <h2>✖️ Times Tables</h2>
       <button onclick="selectGame('tables', 2)">2× Table</button>
       <button onclick="selectGame('tables', 3)">3× Table</button>
       <button onclick="selectGame('tables', 4)">4× Table</button>
       <button onclick="selectGame('tables', 5)">5× Table</button>
+    </div>
+    
+    <div class="card">
+      <h2>✖️ More Tables</h2>
       <button onclick="selectGame('tables', 6)">6× Table</button>
       <button onclick="selectGame('tables', 7)">7× Table</button>
       <button onclick="selectGame('tables', 8)">8× Table</button>
@@ -416,8 +426,10 @@ function selectGame(type, level) {
   var gameName = '';
   if (type === 'addition') {
     gameName = 'Addition up to ' + level;
+  } else if (type === 'subtraction') {
+    gameName = 'Subtraction below ' + level;
   } else {
-    gameName = level + '× Times Table';
+    gameName = level + '× Table (× and ÷)';
   }
   
   document.getElementById('game-choice').textContent = gameName;
@@ -549,11 +561,25 @@ function makeProblem() {
     b = Math.floor(Math.random() * (gameLevel - a)) + 1;
     ans = a + b;
     q = a + ' + ' + b + ' = ?';
+  } else if (gameType === 'subtraction') {
+    a = Math.floor(Math.random() * (gameLevel - 5)) + 5;
+    b = Math.floor(Math.random() * a) + 1;
+    ans = a - b;
+    q = a + ' - ' + b + ' = ?';
   } else {
+    // Times tables - randomly choose multiplication or division
+    var useDivision = Math.random() < 0.5;
     a = gameLevel;
     b = Math.floor(Math.random() * 12) + 1;
-    ans = a * b;
-    q = a + ' × ' + b + ' = ?';
+    
+    if (useDivision) {
+      ans = b;
+      var product = a * b;
+      q = product + ' ÷ ' + a + ' = ?';
+    } else {
+      ans = a * b;
+      q = a + ' × ' + b + ' = ?';
+    }
   }
   return { question: q, answer: ans };
 }
