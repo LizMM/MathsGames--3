@@ -658,18 +658,23 @@ function getLeaderboardKey() {
 }
 
 function checkHighScore(newScore, newTime) {
-  var key = getLeaderboardKey();
-  var lb = JSON.parse(localStorage.getItem(key) || '[]');
-  
-  if (lb.length < 10) return true;
-  
-  lb.sort(function(a, b) {
-    if (b.score !== a.score) return b.score - a.score;
-    return a.time - b.time;
-  });
-  
-  var worst = lb[9];
-  return newScore > worst.score || (newScore === worst.score && newTime < worst.time);
+  try {
+    var key = getLeaderboardKey();
+    var lb = JSON.parse(localStorage.getItem(key) || '[]');
+    
+    if (lb.length < 10) return true;
+    
+    lb.sort(function(a, b) {
+      if (b.score !== a.score) return b.score - a.score;
+      return a.time - b.time;
+    });
+    
+    var worst = lb[9];
+    return newScore > worst.score || (newScore === worst.score && newTime < worst.time);
+  } catch(e) {
+    console.log('localStorage blocked - leaderboard disabled');
+    return false;
+  }
 }
 
 function saveAndContinue() {
@@ -679,68 +684,79 @@ function saveAndContinue() {
     nameInput.value = '';
   }
   document.getElementById('gameover').classList.remove('active');
-  showLeaderboard();
+  document.getElementById('home').classList.add('active');
 }
 
 function saveScore(name) {
-  var key = getLeaderboardKey();
-  var lb = JSON.parse(localStorage.getItem(key) || '[]');
-  
-  lb.push({
-    name: name,
-    score: score,
-    time: gameTotalTime,
-    date: Date.now()
-  });
-  
-  lb.sort(function(a, b) {
-    if (b.score !== a.score) return b.score - a.score;
-    return a.time - b.time;
-  });
-  
-  lb = lb.slice(0, 10);
-  localStorage.setItem(key, JSON.stringify(lb));
+  try {
+    var key = getLeaderboardKey();
+    var lb = JSON.parse(localStorage.getItem(key) || '[]');
+    
+    lb.push({
+      name: name,
+      score: score,
+      time: gameTotalTime,
+      date: Date.now()
+    });
+    
+    lb.sort(function(a, b) {
+      if (b.score !== a.score) return b.score - a.score;
+      return a.time - b.time;
+    });
+    
+    lb = lb.slice(0, 10);
+    localStorage.setItem(key, JSON.stringify(lb));
+  } catch(e) {
+    console.log('Could not save score - localStorage blocked');
+  }
 }
 
 function showLeaderboard() {
-  var content = '';
-  var types = [
-    {type: 'addition', levels: [20, 30]},
-    {type: 'tables', levels: [2, 3, 4, 5, 6, 7, 8, 9, 10]}
-  ];
-  var diffs = ['easy', 'medium', 'hard'];
-  
-  types.forEach(function(t) {
-    t.levels.forEach(function(level) {
-      diffs.forEach(function(diff) {
-        var key = 'mathdrop_lb_' + t.type + '_' + level + '_' + diff;
-        var lb = JSON.parse(localStorage.getItem(key) || '[]');
-        
-        if (lb.length > 0) {
-          var title = t.type === 'addition' ? 'Addition ≤' + level : level + '× Table';
-          title += ' (' + diff.charAt(0).toUpperCase() + diff.slice(1) + ')';
+  try {
+    var content = '';
+    var types = [
+      {type: 'addition', levels: [20, 30]},
+      {type: 'tables', levels: [2, 3, 4, 5, 6, 7, 8, 9, 10]}
+    ];
+    var diffs = ['easy', 'medium', 'hard'];
+    
+    types.forEach(function(t) {
+      t.levels.forEach(function(level) {
+        diffs.forEach(function(diff) {
+          var key = 'mathdrop_lb_' + t.type + '_' + level + '_' + diff;
+          var lb = JSON.parse(localStorage.getItem(key) || '[]');
           
-          content += '<h3 style="margin-top:20px; color:white;">' + title + '</h3>';
-          content += '<div class="lb-table"><table>';
-          content += '<tr><th>#</th><th>Name</th><th>Score</th><th>Time</th></tr>';
-          
-          lb.forEach(function(entry, i) {
-            content += '<tr><td>' + (i+1) + '</td><td>' + entry.name + '</td><td>' + entry.score + '/10</td><td>' + entry.time + 's</td></tr>';
-          });
-          
-          content += '</table></div>';
-        }
+          if (lb.length > 0) {
+            var title = t.type === 'addition' ? 'Addition ≤' + level : level + '× Table';
+            title += ' (' + diff.charAt(0).toUpperCase() + diff.slice(1) + ')';
+            
+            content += '<h3 style="margin-top:20px; color:white;">' + title + '</h3>';
+            content += '<div class="lb-table"><table>';
+            content += '<tr><th>#</th><th>Name</th><th>Score</th><th>Time</th></tr>';
+            
+            lb.forEach(function(entry, i) {
+              content += '<tr><td>' + (i+1) + '</td><td>' + entry.name + '</td><td>' + entry.score + '/10</td><td>' + entry.time + 's</td></tr>';
+            });
+            
+            content += '</table></div>';
+          }
+        });
       });
     });
-  });
-  
-  if (content === '') {
-    content = '<p style="font-size:20px; margin:20px;">No scores yet! Be the first to play!</p>';
+    
+    if (content === '') {
+      content = '<p style="font-size:20px; margin:20px;">No scores yet! Be the first to play!</p>';
+    }
+    
+    document.getElementById('lb-content').innerHTML = content;
+    document.getElementById('home').classList.remove('active');
+    document.getElementById('leaderboard').classList.add('active');
+  } catch(e) {
+    console.log('localStorage blocked - showing message');
+    document.getElementById('lb-content').innerHTML = '<p style="font-size:20px; margin:20px;">Leaderboard not available (localStorage blocked)</p>';
+    document.getElementById('home').classList.remove('active');
+    document.getElementById('leaderboard').classList.add('active');
   }
-  
-  document.getElementById('lb-content').innerHTML = content;
-  document.getElementById('home').classList.remove('active');
-  document.getElementById('leaderboard').classList.add('active');
 }
 
 function closeLeaderboard() {
