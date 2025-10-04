@@ -280,11 +280,6 @@
       <button onclick="selectGame('tables', 9)">9× Table</button>
       <button onclick="selectGame('tables', 10)">10× Table</button>
     </div>
-    
-    <div class="card">
-      <h2>🏆 Leaderboard</h2>
-      <button onclick="showLeaderboard()">View High Scores</button>
-    </div>
   </div>
 </div>
 
@@ -329,21 +324,8 @@
     <p>Score: <span id="finalscore">0</span>/10</p>
     <p>Time: <span id="finaltime">0</span>s</p>
     <p id="message"></p>
-    <div id="name-entry" style="display:none;">
-      <p>🏆 New High Score! Enter your name:</p>
-      <input type="text" class="name-input" id="playername" placeholder="Your name" maxlength="15">
-    </div>
-    <button onclick="saveAndContinue()">Continue</button>
     <button onclick="playAgain()">Play Again</button>
     <button onclick="goHome()">Home</button>
-  </div>
-</div>
-
-<div class="leaderboard-screen" id="leaderboard">
-  <div class="leaderboard-content">
-    <h2>🏆 Leaderboard</h2>
-    <div id="lb-content"></div>
-    <button onclick="closeLeaderboard()">Close</button>
   </div>
 </div>
 
@@ -641,12 +623,6 @@ function endGame() {
   document.getElementById('finaltime').textContent = gameTotalTime;
   var msg = score === 10 ? 'Perfect! 🌟' : score >= 7 ? 'Great job! 👏' : 'Keep practicing! 💪';
   document.getElementById('message').textContent = msg;
-  
-  if (checkHighScore(score, gameTotalTime)) {
-    document.getElementById('name-entry').style.display = 'block';
-  } else {
-    document.getElementById('name-entry').style.display = 'none';
-  }
   
   document.getElementById('game').classList.remove('active');
   document.getElementById('gameover').classList.add('active');
