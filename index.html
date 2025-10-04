@@ -379,36 +379,51 @@ var difficultySettings = {
 };
 
 function initAudio() {
-  if (!audioCtx) {
-    try {
+  try {
+    if (!audioCtx && window.isSecureContext) {
       audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    } catch(e) {
-      console.log('Audio not supported');
+      soundEnabled = true;
+      console.log('Audio initialized successfully');
+    } else if (!window.isSecureContext) {
+      console.log('Audio requires HTTPS - running silently');
       soundEnabled = false;
     }
+  } catch(e) {
+    console.log('Audio not supported:', e);
+    soundEnabled = false;
   }
 }
 
 function playSound(freq, duration, type) {
-  if (!soundEnabled || !audioCtx) return;
-  var osc = audioCtx.createOscillator();
-  var gain = audioCtx.createGain();
-  osc.frequency.value = freq;
-  osc.type = type || 'sine';
-  gain.gain.value = 0.1;
-  osc.connect(gain);
-  gain.connect(audioCtx.destination);
-  osc.start();
-  setTimeout(function() { osc.stop(); }, duration);
+  try {
+    if (!soundEnabled || !audioCtx) return;
+    var osc = audioCtx.createOscillator();
+    var gain = audioCtx.createGain();
+    osc.frequency.value = freq;
+    osc.type = type || 'sine';
+    gain.gain.value = 0.1;
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+    osc.start();
+    setTimeout(function() { 
+      try { osc.stop(); } catch(e) {}
+    }, duration);
+  } catch(e) {
+    console.log('Sound playback failed:', e);
+  }
 }
 
 function correctSound() {
-  playSound(523, 100, 'sine');
-  setTimeout(function() { playSound(659, 100, 'sine'); }, 100);
+  try {
+    playSound(523, 100, 'sine');
+    setTimeout(function() { playSound(659, 100, 'sine'); }, 100);
+  } catch(e) {}
 }
 
 function wrongSound() {
-  playSound(200, 150, 'square');
+  try {
+    playSound(200, 150, 'square');
+  } catch(e) {}
 }
 
 function selectGame(type, level) {
