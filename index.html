@@ -96,14 +96,18 @@
     .lives { font-size: 24px; }
     
     .problem {
-      position: absolute;
+      position: fixed;
+      left: 50%;
+      top: 150px;
+      transform: translateX(-50%);
       background: white;
       padding: 20px;
       border-radius: 15px;
       border: 4px solid #4ECDC4;
       box-shadow: 0 5px 20px rgba(0,0,0,0.2);
-      z-index: 10;
-      min-width: 200px;
+      z-index: 50;
+      min-width: 250px;
+      max-width: 90vw;
     }
     
     .problem .question {
@@ -270,6 +274,8 @@ function startGame(type, level) {
 }
 
 function nextQuestion() {
+  console.log('nextQuestion called, question:', question, 'lives:', lives);
+  
   if (question > 10 || lives <= 0) {
     endGame();
     return;
@@ -279,15 +285,16 @@ function nextQuestion() {
   var prob = makeProblem();
   correctAnswer = prob.answer;
   
+  console.log('Problem:', prob.question, 'Answer:', correctAnswer);
+  
   if (problemEl) problemEl.remove();
   
   problemEl = document.createElement('div');
   problemEl.className = 'problem';
-  problemEl.style.left = Math.random() * (window.innerWidth - 250) + 'px';
-  problemEl.style.top = '100px';
   problemEl.innerHTML = '<div class="question">' + prob.question + '</div><div class="answer" id="ans"></div>';
   
   document.getElementById('game').appendChild(problemEl);
+  console.log('Problem element added to page');
 }
 
 function makeProblem() {
