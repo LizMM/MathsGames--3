@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>Math Drop Game</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, Arial, sans-serif;
+      background: linear-gradient(135deg, #FFB347 0%, #FF6B9D 100%);
+      overflow: hidden;
+      height: 100vh;
+      -webkit-user-select: none;
+      user-select: none;
+    }
+    
+    .screen { display: none; }
+    .screen.active { display: block; width: 100vw; height: 100vh; }
+    
+    .home-screen { 
+      padding: 20px; 
+      display: flex; 
+      flex-direction: column; 
+      align-items: center; 
+      justify-content: center;
+    }
+    
+    .home-screen.active { display: flex; }
+    
+    h1 { color: white; font-size: 36px; margin-bottom: 20px; text-align: center; }
+    
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 15px;
+      max-width: 400px;
+      width: 100%;
+    }
+    
+    .card {
+      background: white;
+      border-radius: 15px;
+      padding: 20px;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+    }
+    
+    .card h2 {
+      font-size: 20px;
+      color: #2D3748;
+      margin-bottom: 15px;
+      text-align: center;
+    }
+    
+    button {
+      width: 100%;
+      padding: 15px;
+      margin: 8px 0;
+      font-size: 18px;
+      font-weight: bold;
+      border: none;
+      border-radius: 12px;
+      background: linear-gradient(145deg, #4ECDC4, #45B7D1);
+      color: white;
+      cursor: pointer;
+      font-family: inherit;
+      box-shadow: 0 3px 10px rgba(0,0,0,0.2);
+    }
+    
+    button:active {
+      transform: scale(0.98);
+    }
+    
+    .game-screen {
+      position: relative;
+      background: linear-gradient(135deg, #FFE5B4 0%, #E0BBE4 100%);
+    }
+    
+    .ui {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      background: white;
+      padding: 15px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 3px solid #4ECDC4;
+      z-index: 100;
+    }
+    
+    .score { font-size: 24px; font-weight: bold; color: #EF476F; }
+    .lives { font-size: 24px; }
+    
+    .problem {
+      position: absolute;
+      background: white;
+      padding: 20px;
+      border-radius: 15px;
+      border: 4px solid #4ECDC4;
+      box-shadow: 0 5px 20px rgba(0,0,0,0.2);
+      z-index: 10;
+      min-width: 200px;
+    }
+    
+    .problem .question {
+      font-size: 32px;
+      font-weight: bold;
+      color: #2D3748;
+      text-align: center;
+      margin-bottom: 10px;
+    }
+    
+    .problem .answer {
+      background: #F7FAFC;
+      border: 3px solid #4ECDC4;
+      border-radius: 10px;
+      padding: 10px;
+      font-size: 28px;
+      font-weight: bold;
+      text-align: center;
+      min-height: 45px;
+      line-height: 45px;
+      color: #2D3748;
+    }
+    
+    .numpad {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: white;
+      padding: 15px;
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 10px;
+      border-top: 3px solid #4ECDC4;
+      z-index: 101;
+    }
+    
+    .numpad button {
+      padding: 20px;
+      margin: 0;
+      font-size: 24px;
+      border-radius: 12px;
+    }
+    
+    .numpad .zero { grid-column: span 2; }
+    .numpad .clear { 
+      grid-column: span 2; 
+      background: linear-gradient(145deg, #F38181, #E76B6B);
+    }
+    
+    .game-over {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.85);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 200;
+    }
+    
+    .game-over.active { display: flex; }
+    
+    .game-over-content {
+      background: linear-gradient(145deg, #FFB347, #FF6B9D);
+      color: white;
+      padding: 40px;
+      border-radius: 20px;
+      text-align: center;
+      max-width: 90vw;
+      border: 4px solid white;
+    }
+    
+    .game-over h2 { font-size: 36px; margin-bottom: 20px; }
+    .game-over p { font-size: 24px; margin: 10px 0; }
+    
+    .game-over button {
+      margin: 10px 5px;
+      background: linear-gradient(145deg, #06D6A0, #05C494);
+    }
+  </style>
+</head>
+<body>
+
+<div class="screen active home-screen" id="home">
+  <h1>🎯 Math Drop! 🎯</h1>
+  
+  <div class="grid">
+    <div class="card">
+      <h2>➕ Addition</h2>
+      <button onclick="startGame('addition', 20)">Up to 20</button>
+      <button onclick="startGame('addition', 30)">Up to 30</button>
+    </div>
+    
+    <div class="card">
+      <h2>✖️ Times Tables</h2>
+      <button onclick="startGame('tables', 2)">2× Table</button>
+      <button onclick="startGame('tables', 5)">5× Table</button>
+      <button onclick="startGame('tables', 10)">10× Table</button>
+    </div>
+  </div>
+</div>
+
+<div class="screen game-screen" id="game">
+  <div class="ui">
+    <div class="score">Score: <span id="score">0</span></div>
+    <div class="lives" id="lives">❤️❤️❤️</div>
+    <button onclick="goHome()" style="width:auto; padding:10px 15px; margin:0;">🏠</button>
+  </div>
+  
+  <div class="numpad">
+    <button onclick="addNum('1')">1</button>
+    <button onclick="addNum('2')">2</button>
+    <button onclick="addNum('3')">3</button>
+    <button onclick="addNum('4')">4</button>
+    <button onclick="addNum('5')">5</button>
+    <button onclick="addNum('6')">6</button>
+    <button onclick="addNum('7')">7</button>
+    <button onclick="addNum('8')">8</button>
+    <button onclick="addNum('9')">9</button>
+    <button class="zero" onclick="addNum('0')">0</button>
+    <button class="clear" onclick="clearNum()">Clear</button>
+  </div>
+</div>
+
+<div class="game-over" id="gameover">
+  <div class="game-over-content">
+    <h2>Well Done! 🎉</h2>
+    <p>Score: <span id="finalscore">0</span>/10</p>
+    <p id="message"></p>
+    <button onclick="playAgain()">Play Again</button>
+    <button onclick="goHome()">Home</button>
+  </div>
+</div>
+
+<script>
+alert('Script loaded!');
+
+var score = 0;
+var question = 1;
+var lives = 3;
+var gameActive = false;
+var currentAnswer = '';
+var correctAnswer = 0;
+var gameType = '';
+var gameLevel = 0;
+var problemEl = null;
+
+function startGame(type, level) {
+  alert('Starting: ' + type + ' ' + level);
+  gameType = type;
+  gameLevel = level;
+  score = 0;
+  question = 1;
+  lives = 3;
+  currentAnswer = '';
+  gameActive = true;
+  
+  document.getElementById('home').classList.remove('active');
+  document.getElementById('game').classList.add('active');
+  document.getElementById('gameover').classList.remove('active');
+  
+  updateUI();
+  nextQuestion();
+}
+
+function nextQuestion() {
+  if (question > 10 || lives <= 0) {
+    endGame();
+    return;
+  }
+  
+  currentAnswer = '';
+  var prob = makeProblem();
+  correctAnswer = prob.answer;
+  
+  if (problemEl) problemEl.remove();
+  
+  problemEl = document.createElement('div');
+  problemEl.className = 'problem';
+  problemEl.style.left = Math.random() * (window.innerWidth - 250) + 'px';
+  problemEl.style.top = '100px';
+  problemEl.innerHTML = '<div class="question">' + prob.question + '</div><div class="answer" id="ans"></div>';
+  
+  document.getElementById('game').appendChild(problemEl);
+}
+
+function makeProblem() {
+  var a, b, ans, q;
+  if (gameType === 'addition') {
+    a = Math.floor(Math.random() * (gameLevel - 5)) + 1;
+    b = Math.floor(Math.random() * (gameLevel - a)) + 1;
+    ans = a + b;
+    q = a + ' + ' + b + ' = ?';
+  } else {
+    a = gameLevel;
+    b = Math.floor(Math.random() * 12) + 1;
+    ans = a * b;
+    q = a + ' × ' + b + ' = ?';
+  }
+  return { question: q, answer: ans };
+}
+
+function addNum(n) {
+  if (!gameActive) return;
+  if (currentAnswer.length >= 3) return;
+  
+  currentAnswer += n;
+  document.getElementById('ans').textContent = currentAnswer;
+  
+  var digits = String(correctAnswer).length;
+  if (currentAnswer.length >= digits) {
+    setTimeout(checkAnswer, 300);
+  }
+}
+
+function clearNum() {
+  currentAnswer = '';
+  if (document.getElementById('ans')) {
+    document.getElementById('ans').textContent = '';
+  }
+}
+
+function checkAnswer() {
+  var userAns = parseInt(currentAnswer);
+  if (userAns === correctAnswer) {
+    score++;
+    if (problemEl) problemEl.style.background = '#95E1D3';
+  } else {
+    lives--;
+    if (problemEl) problemEl.style.background = '#F38181';
+  }
+  
+  updateUI();
+  question++;
+  
+  setTimeout(nextQuestion, 500);
+}
+
+function updateUI() {
+  document.getElementById('score').textContent = score;
+  var h = '';
+  for (var i = 0; i < lives; i++) h += '❤️';
+  for (var i = lives; i < 3; i++) h += '🖤';
+  document.getElementById('lives').innerHTML = h;
+}
+
+function endGame() {
+  gameActive = false;
+  if (problemEl) problemEl.remove();
+  
+  document.getElementById('finalscore').textContent = score;
+  var msg = score === 10 ? 'Perfect!' : score >= 7 ? 'Great job!' : 'Keep practicing!';
+  document.getElementById('message').textContent = msg;
+  document.getElementById('gameover').classList.add('active');
+}
+
+function playAgain() {
+  startGame(gameType, gameLevel);
+}
+
+function goHome() {
+  gameActive = false;
+  if (problemEl) problemEl.remove();
+  document.getElementById('home').classList.add('active');
+  document.getElementById('game').classList.remove('active');
+  document.getElementById('gameover').classList.remove('active');
+}
+
+alert('Script fully loaded and ready!');
+</script>
+
+</body>
+</html>
