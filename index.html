@@ -21,7 +21,7 @@
     
     .home-screen { 
       padding: 20px; 
-      display: flex; 
+      display: none;
       flex-direction: column; 
       align-items: center; 
       justify-content: center;
@@ -97,8 +97,7 @@
     
     .problem {
       position: fixed;
-      left: 50%;
-      top: 150px;
+      left: 15%;
       transform: translateX(-50%);
       background: white;
       padding: 20px;
@@ -106,12 +105,13 @@
       border: 4px solid #4ECDC4;
       box-shadow: 0 5px 20px rgba(0,0,0,0.2);
       z-index: 50;
-      min-width: 250px;
-      max-width: 90vw;
+      min-width: 200px;
+      max-width: 40vw;
+      transition: top 0.05s linear;
     }
     
     .problem .question {
-      font-size: 32px;
+      font-size: 28px;
       font-weight: bold;
       color: #2D3748;
       text-align: center;
@@ -122,39 +122,42 @@
       background: #F7FAFC;
       border: 3px solid #4ECDC4;
       border-radius: 10px;
-      padding: 10px;
-      font-size: 28px;
+      padding: 8px;
+      font-size: 24px;
       font-weight: bold;
       text-align: center;
-      min-height: 45px;
-      line-height: 45px;
+      min-height: 40px;
+      line-height: 40px;
       color: #2D3748;
     }
     
     .numpad {
       position: fixed;
-      bottom: 0;
-      left: 0;
+      top: 80px;
       right: 0;
+      bottom: 0;
+      width: 50%;
       background: white;
       padding: 15px;
       display: grid;
-      grid-template-columns: repeat(5, 1fr);
+      grid-template-columns: repeat(3, 1fr);
+      grid-template-rows: repeat(4, 1fr);
       gap: 10px;
-      border-top: 3px solid #4ECDC4;
+      border-left: 3px solid #4ECDC4;
       z-index: 101;
     }
     
     .numpad button {
-      padding: 20px;
+      padding: 15px;
       margin: 0;
       font-size: 24px;
       border-radius: 12px;
+      height: 100%;
     }
     
     .numpad .zero { grid-column: span 2; }
     .numpad .clear { 
-      grid-column: span 2; 
+      grid-column: span 3; 
       background: linear-gradient(145deg, #F38181, #E76B6B);
     }
     
@@ -254,6 +257,10 @@ var correctAnswer = 0;
 var gameType = '';
 var gameLevel = 0;
 var problemEl = null;
+var problemY = 80;
+var fallSpeed = 1.5;
+var animationId = null;
+var answered = false;
 
 function startGame(type, level) {
   console.log('Starting: ' + type + ' ' + level);
@@ -282,19 +289,48 @@ function nextQuestion() {
   }
   
   currentAnswer = '';
+  answered = false;
   var prob = makeProblem();
   correctAnswer = prob.answer;
   
   console.log('Problem:', prob.question, 'Answer:', correctAnswer);
   
   if (problemEl) problemEl.remove();
+  if (animationId) cancelAnimationFrame(animationId);
   
   problemEl = document.createElement('div');
   problemEl.className = 'problem';
+  problemY = 80;
+  problemEl.style.top = problemY + 'px';
   problemEl.innerHTML = '<div class="question">' + prob.question + '</div><div class="answer" id="ans"></div>';
   
   document.getElementById('game').appendChild(problemEl);
   console.log('Problem element added to page');
+  
+  fallProblem();
+}
+
+function fallProblem() {
+  if (!gameActive || answered) return;
+  
+  problemY += fallSpeed;
+  
+  if (problemEl) {
+    problemEl.style.top = problemY + 'px';
+  }
+  
+  var bottomLimit = window.innerHeight - 150;
+  
+  if (problemY >= bottomLimit) {
+    console.log('Problem hit bottom!');
+    lives--;
+    updateUI();
+    question++;
+    setTimeout(nextQuestion, 500);
+    return;
+  }
+  
+  animationId = requestAnimationFrame(fallProblem);
 }
 
 function makeProblem() {
@@ -314,7 +350,7 @@ function makeProblem() {
 }
 
 function addNum(n) {
-  if (!gameActive) return;
+  if (!gameActive || answered) return;
   if (currentAnswer.length >= 3) return;
   
   currentAnswer += n;
@@ -334,6 +370,13 @@ function clearNum() {
 }
 
 function checkAnswer() {
+  if (answered) return;
+  answered = true;
+  
+  if (animationId) {
+    cancelAnimationFrame(animationId);
+  }
+  
   var userAns = parseInt(currentAnswer);
   if (userAns === correctAnswer) {
     score++;
@@ -359,6 +402,7 @@ function updateUI() {
 
 function endGame() {
   gameActive = false;
+  if (animationId) cancelAnimationFrame(animationId);
   if (problemEl) problemEl.remove();
   
   document.getElementById('finalscore').textContent = score;
@@ -373,6 +417,7 @@ function playAgain() {
 
 function goHome() {
   gameActive = false;
+  if (animationId) cancelAnimationFrame(animationId);
   if (problemEl) problemEl.remove();
   document.getElementById('home').classList.add('active');
   document.getElementById('game').classList.remove('active');
