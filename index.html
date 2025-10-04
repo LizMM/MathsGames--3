@@ -251,7 +251,7 @@ var gameLevel = 0;
 var problemEl = null;
 
 function startGame(type, level) {
-  alert('Starting: ' + type + ' ' + level);
+  console.log('Starting: ' + type + ' ' + level);
   gameType = type;
   gameLevel = level;
   score = 0;
@@ -260,9 +260,13 @@ function startGame(type, level) {
   currentAnswer = '';
   gameActive = true;
   
-  document.getElementById('home').classList.remove('active');
-  document.getElementById('game').classList.add('active');
-  document.getElementById('gameover').classList.remove('active');
+  var home = document.getElementById('home');
+  var game = document.getElementById('game');
+  var gameover = document.getElementById('gameover');
+  
+  home.classList.remove('active');
+  game.classList.add('active');
+  gameover.classList.remove('active');
   
   updateUI();
   nextQuestion();
