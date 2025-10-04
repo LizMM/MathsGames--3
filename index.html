@@ -19,7 +19,7 @@
     .screen { display: none; }
     .screen.active { display: block; width: 100vw; height: 100vh; }
     
-    .home-screen { 
+    .home-screen, .difficulty-screen { 
       padding: 20px; 
       display: none;
       flex-direction: column; 
@@ -27,9 +27,10 @@
       justify-content: center;
     }
     
-    .home-screen.active { display: flex; }
+    .home-screen.active, .difficulty-screen.active { display: flex; }
     
     h1 { color: white; font-size: 36px; margin-bottom: 20px; text-align: center; }
+    .subtitle { color: white; font-size: 20px; margin-bottom: 30px; text-align: center; font-weight: bold; }
     
     .grid {
       display: grid;
@@ -70,6 +71,16 @@
     
     button:active {
       transform: scale(0.98);
+    }
+    
+    .diff-easy { background: linear-gradient(145deg, #06D6A0, #05C494); }
+    .diff-medium { background: linear-gradient(145deg, #FFE66D, #FFD93D); color: #2D3748; }
+    .diff-hard { background: linear-gradient(145deg, #EF476F, #E63E6D); }
+    
+    .back-btn {
+      background: linear-gradient(145deg, #AA96DA, #9B7EDE);
+      max-width: 200px;
+      margin-top: 20px;
     }
     
     .game-screen {
@@ -200,16 +211,28 @@
   <div class="grid">
     <div class="card">
       <h2>➕ Addition</h2>
-      <button onclick="startGame('addition', 20)">Up to 20</button>
-      <button onclick="startGame('addition', 30)">Up to 30</button>
+      <button onclick="selectGame('addition', 20)">Up to 20</button>
+      <button onclick="selectGame('addition', 30)">Up to 30</button>
     </div>
     
     <div class="card">
       <h2>✖️ Times Tables</h2>
-      <button onclick="startGame('tables', 2)">2× Table</button>
-      <button onclick="startGame('tables', 5)">5× Table</button>
-      <button onclick="startGame('tables', 10)">10× Table</button>
+      <button onclick="selectGame('tables', 2)">2× Table</button>
+      <button onclick="selectGame('tables', 5)">5× Table</button>
+      <button onclick="selectGame('tables', 10)">10× Table</button>
     </div>
+  </div>
+</div>
+
+<div class="screen difficulty-screen" id="difficulty">
+  <h1>Choose Difficulty</h1>
+  <p class="subtitle" id="game-choice"></p>
+  
+  <div class="grid">
+    <button class="diff-easy" onclick="startGameWithDifficulty('easy')">😊 Easy<br><small>5 Lives • Slow</small></button>
+    <button class="diff-medium" onclick="startGameWithDifficulty('medium')">😐 Medium<br><small>3 Lives • Normal</small></button>
+    <button class="diff-hard" onclick="startGameWithDifficulty('hard')">😤 Hard<br><small>2 Lives • Fast</small></button>
+    <button class="back-btn" onclick="backToHome()">← Back</button>
   </div>
 </div>
 
@@ -251,33 +274,67 @@ console.log('Script loaded!');
 var score = 0;
 var question = 1;
 var lives = 3;
+var maxLives = 3;
 var gameActive = false;
 var currentAnswer = '';
 var correctAnswer = 0;
 var gameType = '';
 var gameLevel = 0;
+var difficulty = 'medium';
 var problemEl = null;
 var problemY = 80;
 var fallSpeed = 1.5;
 var animationId = null;
 var answered = false;
 
-function startGame(type, level) {
-  console.log('Starting: ' + type + ' ' + level);
+var difficultySettings = {
+  easy: { lives: 5, speed: 1.0 },
+  medium: { lives: 3, speed: 1.5 },
+  hard: { lives: 2, speed: 2.5 }
+};
+
+function selectGame(type, level) {
+  console.log('Game selected:', type, level);
   gameType = type;
   gameLevel = level;
+  
+  var gameName = '';
+  if (type === 'addition') {
+    gameName = 'Addition up to ' + level;
+  } else {
+    gameName = level + '× Times Table';
+  }
+  
+  document.getElementById('game-choice').textContent = gameName;
+  document.getElementById('home').classList.remove('active');
+  document.getElementById('difficulty').classList.add('active');
+}
+
+function startGameWithDifficulty(diff) {
+  console.log('Starting game with difficulty:', diff);
+  difficulty = diff;
+  
+  var settings = difficultySettings[diff];
+  maxLives = settings.lives;
+  lives = maxLives;
+  fallSpeed = settings.speed;
+  
   score = 0;
   question = 1;
-  lives = 3;
   currentAnswer = '';
   gameActive = true;
   
-  document.getElementById('home').classList.remove('active');
+  document.getElementById('difficulty').classList.remove('active');
   document.getElementById('game').classList.add('active');
   document.getElementById('gameover').classList.remove('active');
   
   updateUI();
   nextQuestion();
+}
+
+function backToHome() {
+  document.getElementById('difficulty').classList.remove('active');
+  document.getElementById('home').classList.add('active');
 }
 
 function nextQuestion() {
@@ -396,7 +453,7 @@ function updateUI() {
   document.getElementById('score').textContent = score;
   var h = '';
   for (var i = 0; i < lives; i++) h += '❤️';
-  for (var i = lives; i < 3; i++) h += '🖤';
+  for (var i = lives; i < maxLives; i++) h += '🖤';
   document.getElementById('lives').innerHTML = h;
 }
 
@@ -412,7 +469,7 @@ function endGame() {
 }
 
 function playAgain() {
-  startGame(gameType, gameLevel);
+  startGameWithDifficulty(difficulty);
 }
 
 function goHome() {
@@ -422,6 +479,7 @@ function goHome() {
   document.getElementById('home').classList.add('active');
   document.getElementById('game').classList.remove('active');
   document.getElementById('gameover').classList.remove('active');
+  document.getElementById('difficulty').classList.remove('active');
 }
 
 console.log('Script fully loaded and ready!');
