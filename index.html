@@ -93,7 +93,7 @@
       position: fixed;
       top: 0;
       left: 0;
-      right: 0;
+      right: 50%;
       background: white;
       padding: 15px;
       display: flex;
@@ -105,6 +105,16 @@
     
     .score { font-size: 24px; font-weight: bold; color: #EF476F; }
     .lives { font-size: 24px; }
+    .timer { 
+      font-size: 28px; 
+      font-weight: bold; 
+      color: #06D6A0;
+      background: #F7FAFC;
+      padding: 5px 15px;
+      border-radius: 10px;
+      border: 2px solid #4ECDC4;
+    }
+    .timer.warning { color: #EF476F; }
     
     .problem {
       position: fixed;
@@ -172,7 +182,7 @@
       background: linear-gradient(145deg, #F38181, #E76B6B);
     }
     
-    .game-over {
+    .game-over, .leaderboard-screen {
       position: fixed;
       inset: 0;
       background: rgba(0,0,0,0.85);
@@ -180,11 +190,12 @@
       align-items: center;
       justify-content: center;
       z-index: 200;
+      overflow-y: auto;
     }
     
-    .game-over.active { display: flex; }
+    .game-over.active, .leaderboard-screen.active { display: flex; }
     
-    .game-over-content {
+    .game-over-content, .leaderboard-content {
       background: linear-gradient(145deg, #FFB347, #FF6B9D);
       color: white;
       padding: 40px;
@@ -192,14 +203,55 @@
       text-align: center;
       max-width: 90vw;
       border: 4px solid white;
+      max-height: 90vh;
+      overflow-y: auto;
     }
     
-    .game-over h2 { font-size: 36px; margin-bottom: 20px; }
+    .game-over h2, .leaderboard-content h2 { font-size: 36px; margin-bottom: 20px; }
     .game-over p { font-size: 24px; margin: 10px 0; }
     
-    .game-over button {
+    .game-over button, .leaderboard-content button {
       margin: 10px 5px;
       background: linear-gradient(145deg, #06D6A0, #05C494);
+    }
+    
+    .lb-table {
+      background: white;
+      color: #2D3748;
+      border-radius: 12px;
+      margin: 20px 0;
+      overflow: hidden;
+    }
+    
+    .lb-table table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    
+    .lb-table th {
+      background: #4ECDC4;
+      color: white;
+      padding: 12px;
+      font-size: 16px;
+    }
+    
+    .lb-table td {
+      padding: 10px;
+      border-bottom: 1px solid #E2E8F0;
+      font-size: 16px;
+    }
+    
+    .lb-table tr:nth-child(even) {
+      background: #F7FAFC;
+    }
+    
+    .name-input {
+      padding: 12px;
+      font-size: 18px;
+      border: 2px solid white;
+      border-radius: 10px;
+      width: 250px;
+      margin: 10px 0;
     }
   </style>
 </head>
@@ -218,8 +270,19 @@
     <div class="card">
       <h2>✖️ Times Tables</h2>
       <button onclick="selectGame('tables', 2)">2× Table</button>
+      <button onclick="selectGame('tables', 3)">3× Table</button>
+      <button onclick="selectGame('tables', 4)">4× Table</button>
       <button onclick="selectGame('tables', 5)">5× Table</button>
+      <button onclick="selectGame('tables', 6)">6× Table</button>
+      <button onclick="selectGame('tables', 7)">7× Table</button>
+      <button onclick="selectGame('tables', 8)">8× Table</button>
+      <button onclick="selectGame('tables', 9)">9× Table</button>
       <button onclick="selectGame('tables', 10)">10× Table</button>
+    </div>
+    
+    <div class="card">
+      <h2>🏆 Leaderboard</h2>
+      <button onclick="showLeaderboard()">View High Scores</button>
     </div>
   </div>
 </div>
@@ -239,6 +302,7 @@
 <div class="screen game-screen" id="game">
   <div class="ui">
     <div class="score">Score: <span id="score">0</span></div>
+    <div class="timer" id="timer">10</div>
     <div class="lives" id="lives">❤️❤️❤️</div>
     <button onclick="goHome()" style="width:auto; padding:10px 15px; margin:0;">🏠</button>
   </div>
@@ -262,9 +326,23 @@
   <div class="game-over-content">
     <h2>Well Done! 🎉</h2>
     <p>Score: <span id="finalscore">0</span>/10</p>
+    <p>Time: <span id="finaltime">0</span>s</p>
     <p id="message"></p>
+    <div id="name-entry" style="display:none;">
+      <p>🏆 New High Score! Enter your name:</p>
+      <input type="text" class="name-input" id="playername" placeholder="Your name" maxlength="15">
+    </div>
+    <button onclick="saveAndContinue()">Continue</button>
     <button onclick="playAgain()">Play Again</button>
     <button onclick="goHome()">Home</button>
+  </div>
+</div>
+
+<div class="leaderboard-screen" id="leaderboard">
+  <div class="leaderboard-content">
+    <h2>🏆 Leaderboard</h2>
+    <div id="lb-content"></div>
+    <button onclick="closeLeaderboard()">Close</button>
   </div>
 </div>
 
@@ -286,12 +364,51 @@ var problemY = 80;
 var fallSpeed = 1.5;
 var animationId = null;
 var answered = false;
+var timeLeft = 10;
+var timerInterval = null;
+var gameStartTime = 0;
+var gameTotalTime = 0;
+var audioCtx = null;
+var soundEnabled = true;
 
 var difficultySettings = {
-  easy: { lives: 5, speed: 1.0 },
-  medium: { lives: 3, speed: 1.5 },
-  hard: { lives: 2, speed: 2.5 }
+  easy: { lives: 5, speed: 1.0, time: 15 },
+  medium: { lives: 3, speed: 1.5, time: 10 },
+  hard: { lives: 2, speed: 2.5, time: 7 }
 };
+
+function initAudio() {
+  if (!audioCtx) {
+    try {
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    } catch(e) {
+      console.log('Audio not supported');
+      soundEnabled = false;
+    }
+  }
+}
+
+function playSound(freq, duration, type) {
+  if (!soundEnabled || !audioCtx) return;
+  var osc = audioCtx.createOscillator();
+  var gain = audioCtx.createGain();
+  osc.frequency.value = freq;
+  osc.type = type || 'sine';
+  gain.gain.value = 0.1;
+  osc.connect(gain);
+  gain.connect(audioCtx.destination);
+  osc.start();
+  setTimeout(function() { osc.stop(); }, duration);
+}
+
+function correctSound() {
+  playSound(523, 100, 'sine');
+  setTimeout(function() { playSound(659, 100, 'sine'); }, 100);
+}
+
+function wrongSound() {
+  playSound(200, 150, 'square');
+}
 
 function selectGame(type, level) {
   console.log('Game selected:', type, level);
@@ -318,11 +435,15 @@ function startGameWithDifficulty(diff) {
   maxLives = settings.lives;
   lives = maxLives;
   fallSpeed = settings.speed;
+  timeLeft = settings.time;
   
   score = 0;
   question = 1;
   currentAnswer = '';
   gameActive = true;
+  gameStartTime = Date.now();
+  
+  initAudio();
   
   document.getElementById('difficulty').classList.remove('active');
   document.getElementById('game').classList.add('active');
@@ -354,6 +475,7 @@ function nextQuestion() {
   
   if (problemEl) problemEl.remove();
   if (animationId) cancelAnimationFrame(animationId);
+  if (timerInterval) clearInterval(timerInterval);
   
   problemEl = document.createElement('div');
   problemEl.className = 'problem';
@@ -362,9 +484,38 @@ function nextQuestion() {
   problemEl.innerHTML = '<div class="question">' + prob.question + '</div><div class="answer" id="ans"></div>';
   
   document.getElementById('game').appendChild(problemEl);
-  console.log('Problem element added to page');
   
+  timeLeft = difficultySettings[difficulty].time;
+  updateTimer();
+  startTimer();
   fallProblem();
+}
+
+function startTimer() {
+  timerInterval = setInterval(function() {
+    timeLeft--;
+    updateTimer();
+    if (timeLeft <= 0) {
+      clearInterval(timerInterval);
+      if (!answered && gameActive) {
+        wrongSound();
+        lives--;
+        updateUI();
+        question++;
+        setTimeout(nextQuestion, 500);
+      }
+    }
+  }, 1000);
+}
+
+function updateTimer() {
+  var timerEl = document.getElementById('timer');
+  timerEl.textContent = timeLeft;
+  if (timeLeft <= 3) {
+    timerEl.classList.add('warning');
+  } else {
+    timerEl.classList.remove('warning');
+  }
 }
 
 function fallProblem() {
@@ -380,6 +531,8 @@ function fallProblem() {
   
   if (problemY >= bottomLimit) {
     console.log('Problem hit bottom!');
+    if (timerInterval) clearInterval(timerInterval);
+    wrongSound();
     lives--;
     updateUI();
     question++;
@@ -430,16 +583,17 @@ function checkAnswer() {
   if (answered) return;
   answered = true;
   
-  if (animationId) {
-    cancelAnimationFrame(animationId);
-  }
+  if (animationId) cancelAnimationFrame(animationId);
+  if (timerInterval) clearInterval(timerInterval);
   
   var userAns = parseInt(currentAnswer);
   if (userAns === correctAnswer) {
     score++;
+    correctSound();
     if (problemEl) problemEl.style.background = '#95E1D3';
   } else {
     lives--;
+    wrongSound();
     if (problemEl) problemEl.style.background = '#F38181';
   }
   
@@ -460,26 +614,135 @@ function updateUI() {
 function endGame() {
   gameActive = false;
   if (animationId) cancelAnimationFrame(animationId);
+  if (timerInterval) clearInterval(timerInterval);
   if (problemEl) problemEl.remove();
   
+  gameTotalTime = Math.floor((Date.now() - gameStartTime) / 1000);
+  
   document.getElementById('finalscore').textContent = score;
-  var msg = score === 10 ? 'Perfect!' : score >= 7 ? 'Great job!' : 'Keep practicing!';
+  document.getElementById('finaltime').textContent = gameTotalTime;
+  var msg = score === 10 ? 'Perfect! 🌟' : score >= 7 ? 'Great job! 👏' : 'Keep practicing! 💪';
   document.getElementById('message').textContent = msg;
+  
+  if (checkHighScore(score, gameTotalTime)) {
+    document.getElementById('name-entry').style.display = 'block';
+  } else {
+    document.getElementById('name-entry').style.display = 'none';
+  }
+  
   document.getElementById('gameover').classList.add('active');
 }
 
+function getLeaderboardKey() {
+  return 'mathdrop_lb_' + gameType + '_' + gameLevel + '_' + difficulty;
+}
+
+function checkHighScore(newScore, newTime) {
+  var key = getLeaderboardKey();
+  var lb = JSON.parse(localStorage.getItem(key) || '[]');
+  
+  if (lb.length < 10) return true;
+  
+  lb.sort(function(a, b) {
+    if (b.score !== a.score) return b.score - a.score;
+    return a.time - b.time;
+  });
+  
+  var worst = lb[9];
+  return newScore > worst.score || (newScore === worst.score && newTime < worst.time);
+}
+
+function saveAndContinue() {
+  var nameInput = document.getElementById('playername');
+  if (nameInput.value.trim() && document.getElementById('name-entry').style.display !== 'none') {
+    saveScore(nameInput.value.trim());
+    nameInput.value = '';
+  }
+  document.getElementById('gameover').classList.remove('active');
+  showLeaderboard();
+}
+
+function saveScore(name) {
+  var key = getLeaderboardKey();
+  var lb = JSON.parse(localStorage.getItem(key) || '[]');
+  
+  lb.push({
+    name: name,
+    score: score,
+    time: gameTotalTime,
+    date: Date.now()
+  });
+  
+  lb.sort(function(a, b) {
+    if (b.score !== a.score) return b.score - a.score;
+    return a.time - b.time;
+  });
+  
+  lb = lb.slice(0, 10);
+  localStorage.setItem(key, JSON.stringify(lb));
+}
+
+function showLeaderboard() {
+  var content = '';
+  var types = [
+    {type: 'addition', levels: [20, 30]},
+    {type: 'tables', levels: [2, 3, 4, 5, 6, 7, 8, 9, 10]}
+  ];
+  var diffs = ['easy', 'medium', 'hard'];
+  
+  types.forEach(function(t) {
+    t.levels.forEach(function(level) {
+      diffs.forEach(function(diff) {
+        var key = 'mathdrop_lb_' + t.type + '_' + level + '_' + diff;
+        var lb = JSON.parse(localStorage.getItem(key) || '[]');
+        
+        if (lb.length > 0) {
+          var title = t.type === 'addition' ? 'Addition ≤' + level : level + '× Table';
+          title += ' (' + diff.charAt(0).toUpperCase() + diff.slice(1) + ')';
+          
+          content += '<h3 style="margin-top:20px; color:white;">' + title + '</h3>';
+          content += '<div class="lb-table"><table>';
+          content += '<tr><th>#</th><th>Name</th><th>Score</th><th>Time</th></tr>';
+          
+          lb.forEach(function(entry, i) {
+            content += '<tr><td>' + (i+1) + '</td><td>' + entry.name + '</td><td>' + entry.score + '/10</td><td>' + entry.time + 's</td></tr>';
+          });
+          
+          content += '</table></div>';
+        }
+      });
+    });
+  });
+  
+  if (content === '') {
+    content = '<p style="font-size:20px; margin:20px;">No scores yet! Be the first to play!</p>';
+  }
+  
+  document.getElementById('lb-content').innerHTML = content;
+  document.getElementById('home').classList.remove('active');
+  document.getElementById('leaderboard').classList.add('active');
+}
+
+function closeLeaderboard() {
+  document.getElementById('leaderboard').classList.remove('active');
+  document.getElementById('home').classList.add('active');
+}
+
 function playAgain() {
+  document.getElementById('gameover').classList.remove('active');
   startGameWithDifficulty(difficulty);
 }
 
 function goHome() {
   gameActive = false;
   if (animationId) cancelAnimationFrame(animationId);
+  if (timerInterval) clearInterval(timerInterval);
   if (problemEl) problemEl.remove();
   document.getElementById('home').classList.add('active');
   document.getElementById('game').classList.remove('active');
   document.getElementById('gameover').classList.remove('active');
   document.getElementById('difficulty').classList.remove('active');
+  document.getElementById('leaderboard').classList.remove('active');
 }
 
 console.log('Script fully loaded and ready!');
