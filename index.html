@@ -75,6 +75,7 @@
     .game-screen {
       position: relative;
       background: linear-gradient(135deg, #FFE5B4 0%, #E0BBE4 100%);
+      padding-bottom: 200px;
     }
     
     .ui {
@@ -238,7 +239,7 @@
 </div>
 
 <script>
-alert('Script loaded!');
+console.log('Script loaded!');
 
 var score = 0;
 var question = 1;
@@ -260,13 +261,9 @@ function startGame(type, level) {
   currentAnswer = '';
   gameActive = true;
   
-  var home = document.getElementById('home');
-  var game = document.getElementById('game');
-  var gameover = document.getElementById('gameover');
-  
-  home.classList.remove('active');
-  game.classList.add('active');
-  gameover.classList.remove('active');
+  document.getElementById('home').classList.remove('active');
+  document.getElementById('game').classList.add('active');
+  document.getElementById('gameover').classList.remove('active');
   
   updateUI();
   nextQuestion();
@@ -375,7 +372,7 @@ function goHome() {
   document.getElementById('gameover').classList.remove('active');
 }
 
-alert('Script fully loaded and ready!');
+console.log('Script fully loaded and ready!');
 </script>
 
 </body>
