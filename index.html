@@ -290,6 +290,12 @@
       <button onclick="selectGame('tables', 9)">9× Table</button>
       <button onclick="selectGame('tables', 10)">10× Table</button>
     </div>
+    
+    <div class="card">
+      <h2>🎲 Mixed Operations</h2>
+      <button onclick="selectGame('mixed', 20)">Easy Mix (≤20)</button>
+      <button onclick="selectGame('mixed', 30)">Hard Mix (≤30)</button>
+    </div>
   </div>
 </div>
 
@@ -297,10 +303,11 @@
   <h1>Choose Difficulty</h1>
   <p class="subtitle" id="game-choice"></p>
   
-  <div class="grid">
-    <button class="diff-easy" onclick="startGameWithDifficulty('easy')">😊 Easy<br><small>5 Lives • Slow</small></button>
-    <button class="diff-medium" onclick="startGameWithDifficulty('medium')">😐 Medium<br><small>3 Lives • Normal</small></button>
-    <button class="diff-hard" onclick="startGameWithDifficulty('hard')">😤 Hard<br><small>2 Lives • Fast</small></button>
+  <div class="grid" style="grid-template-columns: 1fr;">
+    <button class="diff-easy" onclick="startGameWithDifficulty('easy')">😊 Easy<br><small>5 Lives • Slow • 15s Timer</small></button>
+    <button class="diff-medium" onclick="startGameWithDifficulty('medium')">😐 Medium<br><small>3 Lives • Normal • 10s Timer</small></button>
+    <button class="diff-hard" onclick="startGameWithDifficulty('hard')">😤 Hard<br><small>2 Lives • Fast • 7s Timer</small></button>
+    <button class="diff-adaptive" onclick="startGameWithDifficulty('adaptive')" style="background: linear-gradient(145deg, #AA96DA, #9B7EDE);">🎯 Adaptive<br><small>Adjusts to Your Performance!</small></button>
     <button class="back-btn" onclick="backToHome()">← Back</button>
   </div>
 </div>
@@ -367,7 +374,14 @@ var soundEnabled = true;
 var difficultySettings = {
   easy: { lives: 5, speed: 1.0, time: 15 },
   medium: { lives: 3, speed: 1.5, time: 10 },
-  hard: { lives: 2, speed: 2.5, time: 7 }
+  hard: { lives: 2, speed: 2.5, time: 7 },
+  adaptive: { lives: 3, speed: 1.5, time: 10 }
+};
+
+var adaptiveStats = {
+  correctStreak: 0,
+  recentTimes: [],
+  adjustmentsMade: 0
 };
 
 function initAudio() {
@@ -428,6 +442,8 @@ function selectGame(type, level) {
     gameName = 'Addition up to ' + level;
   } else if (type === 'subtraction') {
     gameName = 'Subtraction below ' + level;
+  } else if (type === 'mixed') {
+    gameName = 'Mixed Operations ≤' + level;
   } else {
     gameName = level + '× Table (× and ÷)';
   }
@@ -446,6 +462,15 @@ function startGameWithDifficulty(diff) {
   lives = maxLives;
   fallSpeed = settings.speed;
   timeLeft = settings.time;
+  
+  // Reset adaptive stats
+  if (diff === 'adaptive') {
+    adaptiveStats = {
+      correctStreak: 0,
+      recentTimes: [],
+      adjustmentsMade: 0
+    };
+  }
   
   score = 0;
   question = 1;
@@ -556,7 +581,35 @@ function fallProblem() {
 
 function makeProblem() {
   var a, b, ans, q;
-  if (gameType === 'addition') {
+  
+  if (gameType === 'mixed') {
+    // Randomly select operation type
+    var ops = ['add', 'sub', 'mul', 'div'];
+    var op = ops[Math.floor(Math.random() * ops.length)];
+    
+    if (op === 'add') {
+      a = Math.floor(Math.random() * (gameLevel - 5)) + 1;
+      b = Math.floor(Math.random() * (gameLevel - a)) + 1;
+      ans = a + b;
+      q = a + ' + ' + b + ' = ?';
+    } else if (op === 'sub') {
+      a = Math.floor(Math.random() * (gameLevel - 5)) + 5;
+      b = Math.floor(Math.random() * a) + 1;
+      ans = a - b;
+      q = a + ' - ' + b + ' = ?';
+    } else if (op === 'mul') {
+      a = Math.floor(Math.random() * 10) + 2;
+      b = Math.floor(Math.random() * 10) + 2;
+      ans = a * b;
+      q = a + ' × ' + b + ' = ?';
+    } else {
+      a = Math.floor(Math.random() * 10) + 2;
+      b = Math.floor(Math.random() * 10) + 2;
+      ans = b;
+      var product = a * b;
+      q = product + ' ÷ ' + a + ' = ?';
+    }
+  } else if (gameType === 'addition') {
     a = Math.floor(Math.random() * (gameLevel - 5)) + 1;
     b = Math.floor(Math.random() * (gameLevel - a)) + 1;
     ans = a + b;
@@ -611,15 +664,53 @@ function checkAnswer() {
   if (animationId) cancelAnimationFrame(animationId);
   if (timerInterval) clearInterval(timerInterval);
   
+  var answerTime = difficultySettings[difficulty].time - timeLeft;
   var userAns = parseInt(currentAnswer);
+  
   if (userAns === correctAnswer) {
     score++;
     correctSound();
     if (problemEl) problemEl.style.background = '#95E1D3';
+    
+    // Track for adaptive difficulty
+    if (difficulty === 'adaptive') {
+      adaptiveStats.correctStreak++;
+      adaptiveStats.recentTimes.push(answerTime);
+      if (adaptiveStats.recentTimes.length > 3) {
+        adaptiveStats.recentTimes.shift();
+      }
+      
+      // Adjust difficulty if doing well
+      if (adaptiveStats.correctStreak >= 3) {
+        var avgTime = adaptiveStats.recentTimes.reduce(function(a,b){return a+b;}, 0) / adaptiveStats.recentTimes.length;
+        
+        if (avgTime < 4 && fallSpeed < 3.0) {
+          fallSpeed += 0.3;
+          console.log('Adaptive: Increased speed to', fallSpeed);
+        }
+        if (avgTime < 3 && difficultySettings.adaptive.time > 7) {
+          difficultySettings.adaptive.time--;
+          console.log('Adaptive: Decreased time to', difficultySettings.adaptive.time);
+        }
+      }
+    }
   } else {
     lives--;
     wrongSound();
     if (problemEl) problemEl.style.background = '#F38181';
+    
+    // Reset streak and ease difficulty on wrong answer
+    if (difficulty === 'adaptive') {
+      adaptiveStats.correctStreak = 0;
+      if (fallSpeed > 1.0) {
+        fallSpeed -= 0.2;
+        console.log('Adaptive: Decreased speed to', fallSpeed);
+      }
+      if (difficultySettings.adaptive.time < 12) {
+        difficultySettings.adaptive.time++;
+        console.log('Adaptive: Increased time to', difficultySettings.adaptive.time);
+      }
+    }
   }
   
   updateUI();
